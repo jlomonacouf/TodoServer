@@ -1,4 +1,4 @@
-import { User } from './profile.entity';
+import { User } from './user.entity';
 
 export const profileProvider = [
   {

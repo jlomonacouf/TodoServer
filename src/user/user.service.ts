@@ -1,6 +1,5 @@
 import { Inject, Injectable } from "@nestjs/common";
-import { User, User as UserEntity } from "./profile.entity";
-import { CreateProfileDto } from "src/user/create-profile.dto";
+import { User, User as UserEntity } from "./user.entity";
 import { Op } from 'sequelize'
 
 @Injectable()
@@ -10,23 +9,27 @@ export class UserService {
         private profileRepository: typeof UserEntity
     ) {}
 
-    async createProfile(createProfileDto: CreateProfileDto) {
+    async createProfile(username: string, 
+                        password : string, 
+                        email : string, 
+                        first_name : string, 
+                        last_name : string) {
         try {
             User.findAll({
                 where: {
                     [Op.or]: [
-                        {username: createProfileDto.username},
-                        {email: createProfileDto.email}
+                        {username: username},
+                        {email: email}
                     ]
                 }
             })
             let user : User = await User.create({
-                username: createProfileDto.username,
-                email: createProfileDto.email,
-                password: createProfileDto.password,
+                username: username,
+                email: email,
+                password: password,
                 salt: "0",
-                first_name: createProfileDto.first_name,
-                last_name: createProfileDto.last_name,
+                first_name: first_name,
+                last_name: last_name,
                 date_created: Date.now(),
                 isVerified: 0
             });
@@ -37,14 +40,20 @@ export class UserService {
         catch(reason: any) {
             if(reason.errors[0]) {
                 if(reason.errors[0].path = 'username_UNIQUE')
-                    return 'Username is already being used';
+                    return {sucess: false, message: 'Username is already being used'};
                 else if(reason.errors[0].path = 'email_UNIQUE')
-                    return 'Email is already being used';
+                    return {sucess: false, message: 'Email is already being used'};
             }
 
-            return 'Unable to create user'
+            return {sucess: false, message: 'Unable to create user'};
         }
 
-        return 'User succesfully created';
+        return {sucess: true, message: 'User succesfully created'};
+    }
+
+    async getUser(username : string) : Promise<any> {
+        const user = await User.findOne({ where: { username: username } });
+
+        return { username: user.username, first_name: user.first_name, last_name: user.last_name }
     }
 }

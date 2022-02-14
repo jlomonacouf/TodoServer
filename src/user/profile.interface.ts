@@ -1,5 +1,3 @@
-import internal from "stream";
-
 export interface Profile {
     username: string;
     email: string;

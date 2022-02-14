@@ -1,19 +1,25 @@
-import { Body, Controller, Get, Post, Req } from '@nestjs/common';
-import { CreateProfileDto } from './create-profile.dto';
+import { Body, Controller, Get, Param, Post, Req } from '@nestjs/common';
 import { UserService } from './user.service';
-import { Profile } from './profile.interface'
 
 @Controller('users')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
-  @Get(':id')
-  getHello(): string {
-    return "hello";
+  @Get('view/:username')
+  getHello(@Param() params) : any {
+    return this.userService.getUser(params.username).then(res => {
+      return res;
+    });
   }
 
   @Post('create_profile')
-  async createProfile(@Body() createProfileDto: CreateProfileDto) {
-    return this.userService.createProfile(createProfileDto);
+  createProfile(@Body('username') username : string,
+                      @Body('password') password : string,
+                      @Body('email') email : string,
+                      @Body('first_name') first_name : string,
+                      @Body('last_name') last_name : string) {
+    return this.userService.createProfile(username, password, email, first_name, last_name).then(res => {
+      return res;
+    });
   }
 }
