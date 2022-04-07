@@ -1,8 +1,9 @@
-import { Table, Column, Model, AllowNull, NotEmpty, AutoIncrement, PrimaryKey } from 'sequelize-typescript';
+import { Table, Column, Model, AllowNull, NotEmpty, AutoIncrement, PrimaryKey, HasMany } from 'sequelize-typescript';
+import { ProjectUser } from 'src/project/projectuser.entity';
 
 @Table(
   {
-    tableName: "user",
+    tableName: 'user',
     timestamps: false
   }
 )
@@ -21,17 +22,12 @@ export class User extends Model {
   @AllowNull(false)
   @NotEmpty
   @Column
-  email!: number;
+  email!: string;
 
   @AllowNull(false)
   @NotEmpty
   @Column
   password!: string;
-
-  @AllowNull(false)
-  @NotEmpty
-  @Column
-  salt!: string;
 
   @Column
   first_name: string;
@@ -46,4 +42,7 @@ export class User extends Model {
 
   @Column
   isVerified: number;
+
+  @HasMany(() => ProjectUser)
+  projectUsers: ProjectUser[];
 }
