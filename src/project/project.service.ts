@@ -4,7 +4,9 @@ import { Op, Sequelize } from 'sequelize'
 import { ProjectUser } from './projectuser.entity';
 import { User } from 'src/user/user.entity';
 import { Issue } from 'src/issue/issue.entity';
-import { PROJECT_PROVIDER, SEQUELIZE_PROVIDER } from '../../constants';
+import { FILE_PROVIDER, PROJECT_PROVIDER, SEQUELIZE_PROVIDER } from '../../constants';
+import { Workflow } from 'src/workflow/workflow.entity';
+import { FileService } from 'src/file_upload/file.service';
 
 @Injectable()
 export class ProjectService {
@@ -12,7 +14,9 @@ export class ProjectService {
         @Inject(PROJECT_PROVIDER)
         private projectRepository: typeof Project,
         @Inject(SEQUELIZE_PROVIDER)
-        private sequelize: Sequelize
+        private sequelize: Sequelize,
+        @Inject(FILE_PROVIDER)
+        private fileService: FileService
     ) {}
 
     private async isUserApartOfProject(projectid: number, userid: number): Promise<boolean> {
@@ -65,13 +69,80 @@ export class ProjectService {
                     project_id: project.id,
                     user_id: userid
                 }, {transaction: t});
+
+                const workflows: Workflow[] = await Workflow.bulkCreate([
+                    { 
+                        project_id: project.id,
+                        stage: 0,
+                        name: "Not Started"
+                    },
+                    { 
+                        project_id: project.id,
+                        stage: 1,
+                        name: "In Progress"
+                    },
+                    { 
+                        project_id: project.id,
+                        stage: 2,
+                        name: "Completed"
+                    },
+                ], {transaction: t});
             });
 
-            return {success: true, message: 'Successfully created project'};
+            return { success: true, message: 'Successfully created project' };
         }
         catch(reason: any)
         {
-            return {success: false, message: 'Unable to create project'};
+            return { success: false, message: 'Unable to create project' };
+        }
+    }
+
+    async uploadPhoto(userid: number, projectName: string, file: Express.Multer.File) {
+        try {
+            let project: Project = await Project.findOne({
+                where: {
+                    name: projectName,
+                    owner_id: userid
+                }
+            });
+
+            if(!project)
+                return { success: false, message: 'Project does not exist' };
+
+            const data: any = await this.fileService.upload(file);
+
+            if(!data)
+                return { success: false, message: 'Upload failed' };
+
+            if(project.image && project.image !== "") { //Delete old image if it exists
+                const deletionResult: any = await this.fileService.delete(project.image);
+
+                if(deletionResult.success === false)
+                    return { success: false, message: 'Unable to upload image' };
+            }
+
+            project.image = data.key;
+
+            await project.save();
+
+            return { success: true, message: 'Successfully uploaded image', data: data.key};
+        }
+        catch(reason: any) {
+            return { success: false, message: 'Unable to upload image' };
+        }
+    }
+
+    async getPhoto(res: any, key: string): Promise<any> {
+        try {
+            const stream = await this.fileService.getFile(key);
+
+            if(!stream)
+                return { success: false, message: 'Unable to find profile picture' };
+
+            stream.createReadStream().pipe(res);
+        }
+        catch(reason: any) {
+            return { success: false, message: 'Unable to find profile picture' };
         }
     }
 
@@ -99,9 +170,10 @@ export class ProjectService {
 
             if(await this.isUserApartOfProject(project.id, userid) === true) {
                 let data = { 
-                    id: project.id, 
+                    owner: username,
                     name: project.name, 
-                    description: project.description 
+                    description: project.description,
+                    image: project.image
                 }
 
                 return {success: true, data: data};
@@ -312,12 +384,19 @@ export class ProjectService {
                         project_id: project.id
                     }
                 });
+
+                const workflows: Workflow[] = await Workflow.findAll({
+                    where: {
+                        project_id: project.id
+                    }
+                })
     
                 if(projectUser)
                 {
                     await this.sequelize.transaction(async (t) => {
                         await Promise.all(projectUser.map((p) => { p.destroy() }));
                         await Promise.all(issues.map((i) => { i.destroy() }));
+                        await Promise.all(workflows.map((w) => { w.destroy() }));
                         await project.destroy();
                     });
                     

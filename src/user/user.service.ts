@@ -4,13 +4,16 @@ import { User, User as UserEntity } from "./user.entity";
 import { Op } from 'sequelize'
 
 import * as bcrypt from 'bcrypt';
-import { PROFILE_PROVIDER } from "../../constants";
+import { PROFILE_PROVIDER, FILE_PROVIDER } from '../../constants';
+import { FileService } from 'src/file_upload/file.service'
 
 @Injectable()
 export class UserService {
     constructor(
         @Inject(PROFILE_PROVIDER)
-        private profileRepository: typeof UserEntity
+        private profileRepository: typeof UserEntity,
+        @Inject(FILE_PROVIDER)
+        private fileService: FileService
     ) {}
 
     async createProfile(username: string, 
@@ -65,6 +68,37 @@ export class UserService {
         }
     }
 
+    async uploadAvatar(userid: number, file: Express.Multer.File) {
+        try {
+            let user: User = await User.findOne({
+                where: {
+                    id: userid
+                }
+            });
+
+            const data: any = await this.fileService.upload(file);
+
+            if(!data)
+                return { success: false, message: 'Upload failed' };
+
+            if(user.avatar && user.avatar !== "") { //Delete old avatar if it exists
+                const deletionResult: any = await this.fileService.delete(user.avatar);
+
+                if(deletionResult.success === false)
+                    return { success: false, message: 'Unable to upload avatar' };
+            }
+
+            user.avatar = data.key;
+
+            await user.save();
+
+            return { success: true, message: 'Successfully uploaded avatar', data: data.key};
+        }
+        catch(reason: any) {
+            return { success: false, message: 'Unable to upload avatar' };
+        }
+    }
+
     async updateProfile(userid: number, password: string, email: string, firstName: string, lastName: string) {
         try {
             let user: User = await User.findOne({
@@ -112,7 +146,7 @@ export class UserService {
 
     async getUser(requestUsername, username: string): Promise<any> {
         try {
-            let attributes = ['username', 'first_name', 'last_name', 'date_created'];
+            let attributes = ['username', 'first_name', 'last_name', 'date_created', 'avatar'];
 
             if(requestUsername === username)
                 attributes.push('email', 'isVerified');
@@ -131,6 +165,20 @@ export class UserService {
         }
         catch(reason: any) {
             return { success: false, message: 'Unable to find user' };
+        }
+    }
+
+    async getAvatar(res: any, key: string): Promise<any> {
+        try {
+            const stream = await this.fileService.getFile(key);
+
+            if(!stream)
+                return { success: false, message: 'Unable to find profile picture' };
+
+            stream.createReadStream().pipe(res);
+        }
+        catch(reason: any) {
+            return { success: false, message: 'Unable to find profile picture' };
         }
     }
 }

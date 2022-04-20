@@ -41,6 +41,9 @@ export class User extends Model {
   date_created!: number;
 
   @Column
+  avatar: string;
+
+  @Column
   isVerified: number;
 
   @HasMany(() => ProjectUser)

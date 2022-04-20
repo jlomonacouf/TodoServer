@@ -1,4 +1,6 @@
-import { Body, Controller, Delete, Get, Param, Post, Put, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { multerOptions } from 'multerOptions';
 import { AuthenticatedGuard } from 'src/auth/authenticated.guard';
 import { ProjectService } from './project.service';
 
@@ -18,23 +20,47 @@ export class ProjectController {
             return res;
         });
     }
+
+    @Put('upload_photo/:project_name')
+    @UseInterceptors(FileInterceptor('file', multerOptions))
+    updateAvatar(@Req() req,
+                 @Param() params,
+                 @UploadedFile() file: Express.Multer.File): any {
+      if(!file || !params.project_name)
+        return { success: false, message: 'Invalid image' };
+  
+      return this.projectService.uploadPhoto(req.user.id, params.project_name, file).then(res => {
+        return res;
+      })
+    }
+
+    @UseGuards(AuthenticatedGuard)
+    @Get('images/:key')
+    viewAvatar(@Req() req, @Res() res, @Param() params): any {
+      if(!params.key)
+        return { success: false, message: 'Missing parameters' };
+  
+      return this.projectService.getPhoto(res, params.key).then(res => {
+        return res;
+      });
+    }
     
-    @Get('view/:username/:projectname')
+    @Get('view/:username/:project_name')
     getProject(@Req() req, @Param() params): any {
-        if(!params.username || !params.projectname)
+        if(!params.username || !params.project_name)
             return { success: false, message: 'Missing parameters' };
     
-        return this.projectService.getProject(req.user.id, params.username, params.projectname).then((res) => {
+        return this.projectService.getProject(req.user.id, params.username, params.project_name).then((res) => {
             return res;
         });
     }
 
-    @Get('get_users/:username/:projectname')
+    @Get('get_users/:username/:project_name')
     getProjectUsers(@Req() req, @Param() params): any {
-        if(!params.username || !params.projectname)
+        if(!params.username || !params.project_name)
             return { success: false, message: 'Missing parameters' };
 
-        return this.projectService.getProjectUsers(req.user.id, params.username, params.projectname).then((res) => {
+        return this.projectService.getProjectUsers(req.user.id, params.username, params.project_name).then((res) => {
             return res;
         });
     }

@@ -31,6 +31,9 @@ export class Project extends Model {
   @Column
   description!: string;
 
+  @Column
+  image: string;
+
   @HasMany(() => ProjectUser)
   projectUsers: ProjectUser[];
 }

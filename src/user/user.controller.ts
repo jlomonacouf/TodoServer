@@ -1,9 +1,13 @@
-import { Body, Controller, Get, Param, Post, Put, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Put, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 
 import { AuthenticatedGuard } from 'src/auth/authenticated.guard';
 import { LocalAuthGuard } from 'src/auth/local-auth.guard';
 
+import { multerOptions } from 'multerOptions';
+
 import { UserService } from './user.service';
+import { FileService } from 'src/file_upload/file.service';
 
 @Controller('user')
 export class UserController {
@@ -25,6 +29,19 @@ export class UserController {
   }
 
   @UseGuards(AuthenticatedGuard)
+  @Put('upload_avatar')
+  @UseInterceptors(FileInterceptor('file', multerOptions))
+  updateAvatar(@Req() req,
+               @UploadedFile() file: Express.Multer.File): any {
+    if(!file)
+      return { success: false, message: 'Invalid image' };
+
+    return this.userService.uploadAvatar(req.user.id, file).then(res => {
+      return res;
+    })
+  }
+
+  @UseGuards(AuthenticatedGuard)
   @Post('update')
   updateProfile(@Req() req,
                 @Body('password') password: string,
@@ -43,6 +60,17 @@ export class UserController {
       return { success: false, message: 'Missing parameters' };
 
     return this.userService.getUser(req.user.username, params.username).then(res => {
+      return res;
+    });
+  }
+
+  @UseGuards(AuthenticatedGuard)
+  @Get('images/:key')
+  viewAvatar(@Req() req, @Res() res, @Param() params): any {
+    if(!params.key)
+      return { success: false, message: 'Missing parameters' };
+
+    return this.userService.getAvatar(res, params.key).then(res => {
       return res;
     });
   }
