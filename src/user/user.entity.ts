@@ -43,9 +43,6 @@ export class User extends Model {
   @Column
   avatar: string;
 
-  @Column
-  isVerified: number;
-
   @HasMany(() => ProjectUser)
   projectUsers: ProjectUser[];
 }

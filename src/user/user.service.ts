@@ -6,6 +6,9 @@ import { Op } from 'sequelize'
 import * as bcrypt from 'bcrypt';
 import { PROFILE_PROVIDER, FILE_PROVIDER } from '../../constants';
 import { FileService } from 'src/file_upload/file.service'
+import { MAILGUN_DOMAIN, MAILGUN_KEY } from "environment";
+
+const mailgun = require("mailgun-js");
 
 @Injectable()
 export class UserService {
@@ -46,8 +49,7 @@ export class UserService {
                     password: hash,
                     first_name: first_name,
                     last_name: last_name,
-                    date_created: Date.now(),
-                    isVerified: 0
+                    date_created: Date.now()
                 });
     
                 await user.save();
