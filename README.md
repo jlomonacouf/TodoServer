@@ -4,13 +4,13 @@ This is the server for Todo, a project management system. It is similar in funct
 
 ## Installation
 
-```bash
+```sh
 $ npm install
 ```
 
 ## Running the app
 
-```bash
+```sh
 # development
 $ npm run start
 
